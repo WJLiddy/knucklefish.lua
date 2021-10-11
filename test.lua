@@ -3,12 +3,14 @@ kf = require "knucklefish"
 
 local pos = kf.Position.new(kf.initial, 0, {true,true}, {true,true}, 0, 0)
 
---local profiler = require("profiler")
---profiler.start()
+local profiler = require("profiler")
+profiler.start()
 
-i = 0
+i = 15
+AI_TURN = true
 
-while(true) do
+while(i > 0) do
+   i = i - 1
    move, score = kf.search(pos)
 
    if(move) then
@@ -21,7 +23,13 @@ while(true) do
 
       AI_TURN = not AI_TURN
       pos = pos:move(move)
-      kf.printboard(pos.board)
+
+      if(AI_TURN) then
+         kf.printboard(pos:rotate().board)
+      else
+         kf.printboard(pos.board)
+
+      end
 
       if score <= -kf.MATE_VALUE then
          print("You won")
@@ -34,8 +42,7 @@ while(true) do
 end
 
 
-kf.printboard(pos:rotate().board)
 -- Code block and/or called functions to profile --
 
---profiler.stop()
---profiler.report("profiler.log")
+profiler.stop()
+profiler.report("profiler.log")

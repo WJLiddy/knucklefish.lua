@@ -219,10 +219,10 @@ function KF.Position:genMoves()
                end
 
                -- Castling
-               if i == sf.A1 and q == "K" and self.wc[0 + __1] then
+               if i == KF.A1 and q == "K" and self.wc[0 + __1] then
                   table.insert(moves, {j, j - 2})
                end
-               if i == sf.H1 and q == "K" and self.wc[1 + __1] then
+               if i == KF.H1 and q == "K" and self.wc[1 + __1] then
                   table.insert(moves, {j, j + 2})
                end
 
@@ -245,7 +245,7 @@ function KF.Position:genMoves()
 
                   -- no moving forward if first move
                   if d == 2 * KF.N and
-                  (i < sf.A1 + KF.N or self.board:sub(i + KF.N + __1, i + KF.N + __1) ~= ".")
+                  (i < KF.A1 + KF.N or self.board:sub(i + KF.N + __1, i + KF.N + __1) ~= ".")
                   then
                      break
                   end
@@ -359,24 +359,37 @@ function KF.Position:value(move)
 end
 
 
--- Original version of sunfish used iterative deepening MTD-bi search...
--- We look at like, all available moves for the ply and pick the best one.
-function KF.search(pos)
+function KF.negamax(pos, move, depth)
+   -- If depth is zero, don't transpose board! just return score of this move
+   if(depth == 0) then
+      return nil, -(pos.score + pos:value(move))
+   end
 
-   local moves = pos:genMoves()
+   -- if we are at the top of tree, no move to apply!
+   if (move ~= nil) then
+      pos = pos:move(move)
+   end
 
    local bestscore = -KF.MATE_VALUE
    local bestmove = nil
 
+   local moves = pos:genMoves()
    for i=1,#moves do
-      local val = pos:value(moves[i])
+      -- If our depth is one, no need to
+      local _, val = KF.negamax(pos, moves[i], depth - 1)
+      val = -val
       if(val > bestscore) then
          bestscore = val
          bestmove = moves[i]
       end
    end
-
    return bestmove, bestscore
+end
+
+-- Original version of sunfish used iterative deepening MTD-bi search...
+-- We use negamax at a depth of two.
+function KF.search(pos)
+   return KF.negamax(pos,nil, 2)
 end
 
 -------------------------------------------------------------------------------
@@ -393,17 +406,17 @@ function KF.parse(c)
    end
 
    local fil, rank = string.byte(p) - string.byte("a"), tonumber(v) - 1
-   return sf.A1 + fil - 10 * rank
+   return KF.A1 + fil - 10 * rank
 end
 
 
 function KF.render(i)
-   local rank, fil = math.floor((i - sf.A1) / 10), (i - sf.A1) % 10
+   local rank, fil = math.floor((i - KF.A1) / 10), (i - KF.A1) % 10
    return string.char(fil + string.byte("a")) .. tostring(-rank + 1)
 end
 
 function KF.convmove(i)
-   local rank, fil = math.floor((i - sf.A1) / 10), (i - sf.A1) % 10
+   local rank, fil = math.floor((i - KF.A1) / 10), (i - KF.A1) % 10
    return {fil,-rank}
 end
 
