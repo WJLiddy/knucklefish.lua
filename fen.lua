@@ -35,7 +35,7 @@ initial = initial .. '         \n' .. '           '
 
 local pos = kf.Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
 if(to_move == "b") then
-  pos:rotate()
+  pos = pos:rotate()
 end
 
 move, score = kf.search(pos)
