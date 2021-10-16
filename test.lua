@@ -1,5 +1,8 @@
 kf = require "knucklefish"
 
+wexplored = {}
+bexplored = {}
+
 function BOTvBOT()
    local pos = kf.Position.new(kf.initial, 0, {true,true}, {true,true}, 0, 0)
 
@@ -11,7 +14,11 @@ function BOTvBOT()
 
    while(true) do
       i = i + 1
-      move = kf.search(pos,"XXXXXXXXXXXX")
+      if(AI_TURN) then
+         move = kf.search(pos,wexplored)
+      else
+         move = kf.search(pos,bexplored)
+      end
 
       if(move) then
          pmove = {kf.convmove(move[1]),kf.convmove(move[2])}
@@ -23,16 +30,18 @@ function BOTvBOT()
          --print(kf.longalg(move[1]) .. kf.longalg(move[2]))
          --print(pmove[2][1] .. "," .. pmove[2][2])
          
-         AI_TURN = not AI_TURN
          pos = pos:move(move)
 
          if(AI_TURN) then
-         --   kf.printboard(pos:rotate().board)
+            table.insert(wexplored,kf.stripWhite(pos.board))
+            kf.printboard(pos:rotate().board)
          else
-         --   kf.printboard(pos.board)
-
+            table.insert(bexplored,kf.stripWhite(pos.board))
+            kf.printboard(pos.board)
          end
 
+         
+         AI_TURN = not AI_TURN
          --if score <= -kf.MATE_VALUE then
          --   print("You won")
          --end

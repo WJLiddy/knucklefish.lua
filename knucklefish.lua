@@ -362,71 +362,73 @@ end
 
 function KF.stripWhite(board)
   alts = "KQRPNB"
+  local nboard = board
   for i=1,#alts do
-    board = string.gsub(board,string.sub(alts,i,i),".")
+    nboard = string.gsub(nboard,string.sub(alts,i,i),".")
   end
-  return board
+  return nboard
+end
+
+function KF.compare(a, b)
+   return a[2] < b[2]
 end
 
 
-
-
-function KF.min(pos, move, depth)
-      return nil, nil, -(pos.score + pos:value(move))
-
-
-
-
-function KF.max(pos, move, depth)
-
-   -- if we are at the top of tree, no move to apply!
-   if (move ~= nil) then
-      pos = pos:move(move)
-   end
-
-   local bestscore = -KF.MATE_VALUE * 2
-   local bestmove = nil
-
-   local backupmove = nil
-   local backupscore = -KF.MATE_VALUE * 2
-
-   local moves = pos:genMoves()
-   for i=1,#moves do 
-      -- Going to pick my best, after opponent picks my worst.
-      
-      local _, _, val = KF.max(pos, moves[i], depth - 1)
-      val = -val
+function KF.min(pos, move)
+   local npos = pos:move(move)
+   local nmoves = npos:genMoves()
+   local best = nil
+   local bestscore = - kf.MATE_VALUE * 2
+   -- pick the best move we can, remember that reverse() was called.
+   for j=1,#nmoves do
+      local val = (npos.score + npos:value(nmoves[j]))
       if(val > bestscore) then
          bestscore = val
-         bestmove = moves[i]
-      elseif(val > backupscore) then
-         backupmove = moves[i]
-         backupscore = val
       end
    end
-   
-   return bestmove, backupmove, bestscore
+   return bestscore
+end
+
+
+function KF.max(pos)
+   local moves = pos:genMoves()
+   local results = {}
+   for i=1,#moves do 
+      -- Make the move and see my position after the opponent makes their best move.
+      -- since the opponent is making their best move -> returns negative.
+      local val = KF.min(pos, moves[i])
+      table.insert(results,{moves[i],val})
+   end
+
+   table.sort(results,KF.compare)
+   return results
+end
+
+
+function KF.not_repeated(board_stripped, states)
+   for j=1, #states do
+      if(states[j] == board_stripped) then
+         return false
+      end
+   end
+   return true
 end
 
 -- Original version of sunfish used iterative deepening MTD-bi search.
--- We only do two plies for maximum speed.
-
---  Three-repetition is somewhat common, if we've made this move in the last 3 moves use an alternate.
-
--- To improve endgame, what we do is add extra weight to king threatening.
+-- We only do two plies - really can't afford any more for speed!
+-- to avoid threefold repeition, we pass the states, and make sure that we are not repeating a
+-- position. this also greatly improves the endgame, by forcing our little 2 ply engine to look ahead.
 
 function KF.search(pos, states)
-   best, backup, score = KF.max(pos,nil, 2)
-   
-   temp = pos:move(best).board
+   moves = KF.max(pos)
 
-   for i=1,#states do
-     if(states[i] == kf.stripWhite(temp)) then
-        return backup
+   for i=1,#moves do
+      local next_move = kf.stripWhite(pos:move(moves[i][1]).board)
+      if(kf.not_repeated(next_move, states)) then
+         return moves[i][1]
       end
-   end
-   
-   return best
+    end
+   return nil
 end
 
 -------------------------------------------------------------------------------
