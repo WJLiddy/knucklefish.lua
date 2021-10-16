@@ -360,34 +360,52 @@ function KF.Position:value(move)
    return score
 end
 
-function KF.negamax(pos, move, depth)
-   -- If depth is zero, don't transpose board! just return score of this move
-   if(depth == 0) then
-      return nil, -(pos.score + pos:value(move))
-   end
+function KF.stripWhite(board)
+  alts = "KQRPNB"
+  for i=1,#alts do
+    board = string.gsub(board,string.sub(alts,i,i),".")
+  end
+  return board
+end
+
+
+
+
+function KF.min(pos, move, depth)
+      return nil, nil, -(pos.score + pos:value(move))
+
+
+
+
+function KF.max(pos, move, depth)
 
    -- if we are at the top of tree, no move to apply!
    if (move ~= nil) then
       pos = pos:move(move)
    end
 
-   local bestscore = -KF.MATE_VALUE
-
-   local backup = nil
+   local bestscore = -KF.MATE_VALUE * 2
    local bestmove = nil
 
+   local backupmove = nil
+   local backupscore = -KF.MATE_VALUE * 2
+
    local moves = pos:genMoves()
-   for i=1,#moves do
-      local _, val = KF.negamax(pos, moves[i], depth - 1)
+   for i=1,#moves do 
+      -- Going to pick my best, after opponent picks my worst.
+      
+      local _, _, val = KF.max(pos, moves[i], depth - 1)
       val = -val
       if(val > bestscore) then
-         backup = bestmove
          bestscore = val
          bestmove = moves[i]
+      elseif(val > backupscore) then
+         backupmove = moves[i]
+         backupscore = val
       end
    end
    
-   return {bestmove,backup}, bestscore
+   return bestmove, backupmove, bestscore
 end
 
 -- Original version of sunfish used iterative deepening MTD-bi search.
@@ -397,24 +415,18 @@ end
 
 -- To improve endgame, what we do is add extra weight to king threatening.
 
-function KF.search(pos, seen)
-   moves = KF.negamax(pos,nil, 2)
-   move_name = KF.longalg(move[1]) ..KF.longalg(move[2])
+function KF.search(pos, states)
+   best, backup, score = KF.max(pos,nil, 2)
+   
+   temp = pos:move(best).board
 
-   -- Run backup move to avoid threefold
-   if(strsub(seen,1,4) == move_name) then
-      return moves[1]
+   for i=1,#states do
+     if(states[i] == kf.stripWhite(temp)) then
+        return backup
+      end
    end
    
-   if(strsub(seen,5,8) == move_name) then
-      return moves[1]
-   end
-   
-   if(strsub(seen,9,13) == move_name) then
-      return moves[1]
-   end
-
-   return moves[2]
+   return best
 end
 
 -------------------------------------------------------------------------------

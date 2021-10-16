@@ -1,5 +1,4 @@
 kf = require "knucklefish"
-require "socket"
 
 function BOTvBOT()
    local pos = kf.Position.new(kf.initial, 0, {true,true}, {true,true}, 0, 0)
@@ -11,10 +10,8 @@ function BOTvBOT()
    AI_TURN = true
 
    while(true) do
-      last_time = socket.gettime()
       i = i + 1
-      move, score = kf.search(pos)
-      print(tostring(i) .. "|" .. tostring(100 * (socket.gettime() - last_time)))
+      move = kf.search(pos,"XXXXXXXXXXXX")
 
       if(move) then
          pmove = {kf.convmove(move[1]),kf.convmove(move[2])}
@@ -36,13 +33,13 @@ function BOTvBOT()
 
          end
 
-         if score <= -kf.MATE_VALUE then
-            print("You won")
-         end
+         --if score <= -kf.MATE_VALUE then
+         --   print("You won")
+         --end
    
-         if score >= kf.MATE_VALUE then
-            print("You lost")
-         end
+         --if score >= kf.MATE_VALUE then
+         --   print("You lost")
+         --end
       end
    end
    --profiler.stop()
