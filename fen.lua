@@ -4,6 +4,8 @@
 kf = require "knucklefish"
 
 board_state = arg[1]
+to_move = arg[2]
+
 
 border  =
 '         \n' .. --   0 -  9
@@ -32,6 +34,14 @@ end
 initial = initial .. '         \n' .. '           '
 
 local pos = kf.Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
+if(to_move == "b") then
+  pos:rotate()
+end
+
 move, score = kf.search(pos)
 
-print(kf.longalg(move[1]) .. kf.longalg(move[2]))
+if(to_move == "b") then
+  print(kf.longalg(119-move[1]) .. kf.longalg(119 - move[2]))
+else
+  print(kf.longalg(move[1]) .. kf.longalg(move[2]))
+end
