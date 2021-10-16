@@ -12,7 +12,7 @@ function BOTvBOT(timing, profile)
       profiler.start()
    end
 
-   i = 10
+   i = 400
    AI_TURN = true
 
    while(i > 0) do

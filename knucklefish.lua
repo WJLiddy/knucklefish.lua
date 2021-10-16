@@ -382,7 +382,7 @@ function KF.min(pos, move)
    -- pick the best move we can, remember that reverse() was called.
    for j=1,#nmoves do
       local val = (npos.score + npos:value(nmoves[j]))
-      print("value of BLACK " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
+     -- print("value of BLACK " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
       if(val > bestscore) then
          bestscore = val
       end
@@ -399,7 +399,7 @@ function KF.max(pos)
       -- This score is in terms of BLACK's best move. So we will try to minimize this.
       local val = KF.min(pos, moves[i])
       table.insert(results,{moves[i],val})
-      print("RESULT -- value of WHITE " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
+      --print("RESULT -- value of WHITE " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
    end
 
    table.sort(results,KF.compare)
