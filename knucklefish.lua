@@ -388,6 +388,7 @@ end
 
 -- Original version of sunfish used iterative deepening MTD-bi search...
 -- We use negamax at a depth of two.
+-- Later: would sort + alpha/beta prune increase performace?
 function KF.search(pos)
    return KF.negamax(pos,nil, 2)
 end
@@ -409,12 +410,13 @@ function KF.parse(c)
    return KF.A1 + fil - 10 * rank
 end
 
-
-function KF.render(i)
+-- change board position to long algebriac form
+function KF.longalg(i)
    local rank, fil = math.floor((i - KF.A1) / 10), (i - KF.A1) % 10
    return string.char(fil + string.byte("a")) .. tostring(-rank + 1)
 end
 
+-- break board position into integer file and rank
 function KF.convmove(i)
    local rank, fil = math.floor((i - KF.A1) / 10), (i - KF.A1) % 10
    return {fil,-rank}
@@ -445,6 +447,11 @@ function KF.printboard(board)
       end
       io.write("\n")
    end
+end
+
+-- convert move to UCI format.
+function KF.toUCI()
+
 end
 
 return KF
