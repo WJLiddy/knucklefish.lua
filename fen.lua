@@ -3,8 +3,9 @@
 
 kf = require "knucklefish"
 
-board_state = arg[1]
-to_move = arg[2]
+lastmoves = arg[1]
+board_state = arg[2]
+to_move = arg[3]
 
 
 border  =
@@ -12,6 +13,8 @@ border  =
 '         \n ' --  10 - 19
 
 initial = border
+
+
 
 -- Prepare board state from FEN notation.
 for i = 1, #board_state do
@@ -38,10 +41,11 @@ if(to_move == "b") then
   pos = pos:rotate()
 end
 
-move, score = kf.search(pos)
+move, score = kf.search(pos, lastmoves)
 
 if(to_move == "b") then
   print(kf.longalg(119-move[1]) .. kf.longalg(119 - move[2]))
 else
   print(kf.longalg(move[1]) .. kf.longalg(move[2]))
 end
+

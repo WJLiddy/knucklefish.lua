@@ -1,5 +1,5 @@
 kf = require "knucklefish"
-
+require "socket"
 
 function BOTvBOT()
    local pos = kf.Position.new(kf.initial, 0, {true,true}, {true,true}, 0, 0)
@@ -11,8 +11,10 @@ function BOTvBOT()
    AI_TURN = true
 
    while(true) do
+      last_time = socket.gettime()
       i = i + 1
       move, score = kf.search(pos)
+      print(tostring(i) .. "|" .. tostring(100 * (socket.gettime() - last_time)))
 
       if(move) then
          pmove = {kf.convmove(move[1]),kf.convmove(move[2])}
@@ -21,16 +23,16 @@ function BOTvBOT()
             pmove = {kf.convmove(119-move[1]),kf.convmove(119-move[2])}
          end
 
-         print(kf.longalg(move[1]) .. kf.longalg(move[2]))
-         print(pmove[2][1] .. "," .. pmove[2][2])
+         --print(kf.longalg(move[1]) .. kf.longalg(move[2]))
+         --print(pmove[2][1] .. "," .. pmove[2][2])
          
          AI_TURN = not AI_TURN
          pos = pos:move(move)
 
          if(AI_TURN) then
-            kf.printboard(pos:rotate().board)
+         --   kf.printboard(pos:rotate().board)
          else
-            kf.printboard(pos.board)
+         --   kf.printboard(pos.board)
 
          end
 

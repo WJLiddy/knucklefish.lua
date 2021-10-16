@@ -194,6 +194,7 @@ function KF.Position.new(board, score, wc, bc, ep, kp) --
    return self
 end
 
+-- WILL put king into check.
 function KF.Position:genMoves()
    local moves = {}
    -- For each of our pieces, iterate through each possible 'ray' of moves,
@@ -346,6 +347,7 @@ function KF.Position:value(move)
       score = score + KF.pst["R"][math.floor((i + j) / 2) + __1]
       score = score - KF.pst["R"][j < i and KF.A1 + __1 or KF.H1 + __1]
    end
+
    -- Special pawn stuff
    if p == "P" then
       if KF.A8 <= j and j <= KF.H8 then
@@ -357,7 +359,6 @@ function KF.Position:value(move)
    end
    return score
 end
-
 
 function KF.negamax(pos, move, depth)
    -- If depth is zero, don't transpose board! just return score of this move
@@ -371,26 +372,49 @@ function KF.negamax(pos, move, depth)
    end
 
    local bestscore = -KF.MATE_VALUE
+
+   local backup = nil
    local bestmove = nil
 
    local moves = pos:genMoves()
    for i=1,#moves do
-      -- If our depth is one, no need to
       local _, val = KF.negamax(pos, moves[i], depth - 1)
       val = -val
       if(val > bestscore) then
+         backup = bestmove
          bestscore = val
          bestmove = moves[i]
       end
    end
-   return bestmove, bestscore
+   
+   return {bestmove,backup}, bestscore
 end
 
--- Original version of sunfish used iterative deepening MTD-bi search...
--- We use negamax at a depth of two.
--- Later: would sort + alpha/beta prune increase performace?
-function KF.search(pos)
-   return KF.negamax(pos,nil, 2)
+-- Original version of sunfish used iterative deepening MTD-bi search.
+-- We only do two plies for maximum speed.
+
+--  Three-repetition is somewhat common, if we've made this move in the last 3 moves use an alternate.
+
+-- To improve endgame, what we do is add extra weight to king threatening.
+
+function KF.search(pos, seen)
+   moves = KF.negamax(pos,nil, 2)
+   move_name = KF.longalg(move[1]) ..KF.longalg(move[2])
+
+   -- Run backup move to avoid threefold
+   if(strsub(seen,1,4) == move_name) then
+      return moves[1]
+   end
+   
+   if(strsub(seen,5,8) == move_name) then
+      return moves[1]
+   end
+   
+   if(strsub(seen,9,13) == move_name) then
+      return moves[1]
+   end
+
+   return moves[2]
 end
 
 -------------------------------------------------------------------------------
@@ -447,11 +471,6 @@ function KF.printboard(board)
       end
       io.write("\n")
    end
-end
-
--- convert move to UCI format.
-function KF.toUCI()
-
 end
 
 return KF
