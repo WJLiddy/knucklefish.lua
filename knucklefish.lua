@@ -382,6 +382,7 @@ function KF.min(pos, move)
    -- pick the best move we can, remember that reverse() was called.
    for j=1,#nmoves do
       local val = (npos.score + npos:value(nmoves[j]))
+      print("value of BLACK " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
       if(val > bestscore) then
          bestscore = val
       end
@@ -395,9 +396,10 @@ function KF.max(pos)
    local results = {}
    for i=1,#moves do 
       -- Make the move and see my position after the opponent makes their best move.
-      -- since the opponent is making their best move -> returns negative.
+      -- This score is in terms of BLACK's best move. So we will try to minimize this.
       local val = KF.min(pos, moves[i])
       table.insert(results,{moves[i],val})
+      print("RESULT -- value of WHITE " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
    end
 
    table.sort(results,KF.compare)
@@ -415,9 +417,12 @@ function KF.not_repeated(board_stripped, states)
 end
 
 -- Original version of sunfish used iterative deepening MTD-bi search.
--- We only do two plies - really can't afford any more for speed!
--- to avoid threefold repeition, we pass the states, and make sure that we are not repeating a
--- position. this also greatly improves the endgame, by forcing our little 2 ply engine to look ahead.
+
+-- We only do minimax, two plies - really can't afford any more for speed!
+
+-- We also never return to a previous position that our pieces have held, this makes threefold repetition unlikely.
+-- It also greatly improves the endgame, by forcing our little 2 ply engine to look ahead and move pieces up.
+
 
 function KF.search(pos, states)
    moves = KF.max(pos)

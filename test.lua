@@ -1,23 +1,35 @@
 kf = require "knucklefish"
+socket = require "socket"
 
 wexplored = {}
 bexplored = {}
 
-function BOTvBOT()
+function BOTvBOT(timing, profile)
    local pos = kf.Position.new(kf.initial, 0, {true,true}, {true,true}, 0, 0)
 
-   --local profiler = require("profiler")
-   --profiler.start()
+   if(profile) then
+      local profiler = require("profiler")
+      profiler.start()
+   end
 
-   i = 0
+   i = 10
    AI_TURN = true
 
-   while(true) do
-      i = i + 1
-      if(AI_TURN) then
-         move = kf.search(pos,wexplored)
-      else
-         move = kf.search(pos,bexplored)
+   while(i > 0) do
+      i = i - 1
+
+      if(timing) then
+         
+         starttime = socket.gettime()
+
+         if(AI_TURN) then
+            move = kf.search(pos,wexplored)
+         else
+            move = kf.search(pos,bexplored)
+         end
+
+         print("Run Time " .. tostring(i) .. ": " .. tostring(math.floor(1000 * (socket.gettime() - starttime))) .. "ms")
+
       end
 
       if(move) then
@@ -51,9 +63,12 @@ function BOTvBOT()
          --end
       end
    end
-   --profiler.stop()
-   --profiler.report("profiler.log")
+
+   if(profile) then
+     profiler.stop()
+     profiler.report("profiler.log")
+   end
 end
 
 -- Test function
-BOTvBOT()
+BOTvBOT(true,false)
