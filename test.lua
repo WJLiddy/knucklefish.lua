@@ -1,26 +1,28 @@
 kf = require "knucklefish"
 socket = require "socket"
+profiler = require "profiler"
 
 wexplored = {}
 bexplored = {}
 
-function BOTvBOT(timing, profile)
+-- aiming for soft limit of 20 ms.
+
+function BOTvBOT(printboard, timing, profile, i)
    local pos = kf.Position.new(kf.initial, 0, {true,true}, {true,true}, 0, 0)
 
    if(profile) then
-      local profiler = require("profiler")
       profiler.start()
    end
 
-   i = 400
    AI_TURN = true
+   peak = 0
 
    while(i > 0) do
       i = i - 1
 
       if(timing) then
-         
          starttime = socket.gettime()
+      end
 
          if(AI_TURN) then
             move = kf.search(pos,wexplored)
@@ -28,8 +30,12 @@ function BOTvBOT(timing, profile)
             move = kf.search(pos,bexplored)
          end
 
-         print("Run Time " .. tostring(i) .. ": " .. tostring(math.floor(1000 * (socket.gettime() - starttime))) .. "ms")
-
+         if(timing) then
+         time = math.floor(1000 * (socket.gettime() - starttime))
+         print("Run Time " .. tostring(i) .. ": " .. tostring(time) .. "ms")
+         if(time > peak) then
+            peak = time
+         end
       end
 
       if(move) then
@@ -46,10 +52,14 @@ function BOTvBOT(timing, profile)
 
          if(AI_TURN) then
             table.insert(wexplored,kf.stripWhite(pos.board))
-            kf.printboard(pos:rotate().board)
+            if(printboard) then
+               kf.printboard(pos:rotate().board)
+            end
          else
             table.insert(bexplored,kf.stripWhite(pos.board))
-            kf.printboard(pos.board)
+            if(printboard) then
+               kf.printboard(pos.board)
+            end
          end
 
          
@@ -68,7 +78,11 @@ function BOTvBOT(timing, profile)
      profiler.stop()
      profiler.report("profiler.log")
    end
+
+   if(timing) then
+      print("peak " .. tostring(peak) .. "ms")
+   end
 end
 
 -- Test function
-BOTvBOT(true,false)
+BOTvBOT(false, false, true, 30)
