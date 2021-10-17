@@ -18,7 +18,16 @@ local KF = {}
 -- 8 queens up, but we got the king, we still exceed MATE_VALUE.
 KF.MATE_VALUE = 30000
 
+-- A little bonus for checking the king, which is usually a good move.
 KF.CHECK_BONUS = 50
+
+-- This is a value that could HEAVILY IMPLY the king is in checkmate.
+-- It means that A. the king is in check, and B. has nowhere to move.
+-- Checkmate is inevitable unless we have a piece that can un-pin the king.
+-- So avoid this state at all costs.
+
+KF.KING_ENDANGERED = 5000
+
 
 -- Our board is represented as a 120 character string. The padding allows for
 -- fast detection of moves that don't stay within the board.
@@ -251,7 +260,7 @@ function KF.Position.new(board, score, wc, bc, ep, kp) --
 end
 
 -- WILL put king into check.
-function KF.Position:genMoves()
+function KF.Position:genMoves(cover)
    local moves = {}
    -- For each of our pieces, iterate through each possible 'ray' of moves,
    -- as defined in the 'directions' map. The rays are broken e.g. by
@@ -285,6 +294,10 @@ function KF.Position:genMoves()
 
                -- No friendly captures
                if KF.isupper(q) then
+                  -- used for checkmate detection - if king takes the square they die anyway
+                  if(cover) then
+                     table.insert(moves, {i, j})
+                  end
                   break
                end
 
@@ -335,16 +348,14 @@ function KF.Position:move(move)
    assert(move) -- move is zero-indexed
    local i, j = move[0 + __1], move[1 + __1]
    local p, q = self.board:sub(i + __1, i + __1), self.board:sub(j + __1, j + __1)
-   local function put(board, i, p)
-      return board:sub(1, i - 1) .. p .. board:sub(i + 1)
-   end
+
    -- Copy variables and reset ep and kp
    local board = self.board
    local wc, bc, ep, kp = self.wc, self.bc, 0, 0
    local score = self.score + self:value(move)
    -- Actual move
-   board = put(board, j + __1, board:sub(i + __1, i + __1))
-   board = put(board, i + __1, ".")
+   board = kf.put(board, j + __1, board:sub(i + __1, i + __1))
+   board = kf.put(board, i + __1, ".")
    -- Castling rights
    if i == KF.A1 then
       wc = {false, wc[0 + __1]}
@@ -363,20 +374,20 @@ function KF.Position:move(move)
       wc = {false, false}
       if math.abs(j - i) == 2 then
          kp = math.floor((i + j) / 2)
-         board = put(board, j < i and KF.A1 + __1 or KF.H1 + __1, ".")
-         board = put(board, kp + __1, "R")
+         board = kf.put(board, j < i and KF.A1 + __1 or KF.H1 + __1, ".")
+         board = kf.put(board, kp + __1, "R")
       end
    end
    -- Special pawn stuff
    if p == "P" then
       if KF.A8 <= j and j <= KF.H8 then
-         board = put(board, j + __1, "Q")
+         board = kf.put(board, j + __1, "Q")
       end
       if j - i == 2 * KF.N then
          ep = i + KF.N
       end
       if ((j - i) == KF.N + KF.W or (j - i) == KF.N + KF.E) and q == "." then
-         board = put(board, j + KF.S + __1, ".")
+         board = kf.put(board, j + KF.S + __1, ".")
       end
    end
    -- We rotate the returned position, so it's ready for the next player
@@ -384,13 +395,12 @@ function KF.Position:move(move)
 end
 
 -- Quick check for if a major piece puts the king in check.
+-- This function is expensive, so we ignore pawn moves which aren't likely to do anything.
 -- In the end game, this is crucial for forcing a checkmate.
 function KF.probablyInCheck(move,board)
-   assert(move) -- move is zero-indexed
    -- Piece is at i, but went to "n"
    local i, n = move[0 + __1], move[1 + __1]
    local p = board:sub(i + __1, i + __1)
-   assert(p)
 
    -- dont deal with pawns lol
    if(p == "P") then
@@ -475,6 +485,63 @@ function KF.compare(a, b)
    return a[2] < b[2]
 end
 
+function KF.put(board, i, p)
+   return board:sub(1, i - 1) .. p .. board:sub(i + 1)
+end
+
+function KF.kingEndangered(pos,move)
+
+   -- first, apply the move.
+   local i, j = move[0 + __1], move[1 + __1]
+   local p, q = pos.board:sub(i + __1, i + __1), pos.board:sub(j + __1, j + __1)
+   
+   local oldboard = pos.board
+
+   pos.board = kf.put(pos.board, j + __1, pos.board:sub(i + __1, i + __1))
+   pos.board = kf.put(pos.board, i + __1, ".")
+   -- move's applied.
+
+   
+   kf.printboard(pos.board)
+
+   -- Here are the king's options.
+   local kbase = string.find(pos.board,"k")
+
+   local kdirs = {}
+   --print(pos.board:sub(kbase,kbase)) 
+
+   for n=1,#kf.directions.K do
+      local loc = kbase + kf.directions.K[n]
+      --print(string.sub(pos.board,loc,loc))
+      if(string.sub(pos.board,loc,loc) == "." or kf.isupper(string.sub(pos.board,loc,loc))) then
+         -- king can move or take here
+         kdirs[loc] = true
+      end
+   end
+
+   
+   -- and, see if we are in checkmate.
+   local l = pos:genMoves(true)
+
+   for n=1,#l do
+      kdirs[l[n][2] + 1] = false
+   end
+
+   -- put it back.
+   pos.board = oldboard
+
+   -- king has an escape
+   for k,v in pairs(kdirs) do
+      if(v == true) then
+         return false
+      end
+   end
+
+   print("mate possible")
+   return true
+
+end
+
 
 function KF.min(pos, move)
    local npos = pos:move(move)
@@ -484,6 +551,17 @@ function KF.min(pos, move)
    -- pick the best move we can, remember that reverse() was called.
    for j=1,#nmoves do
       local val = (npos.score + npos:value(nmoves[j]))
+
+      -- OPTIONAL! These few lines greatly improve the survivabilty of the bot,
+      -- But ~doubles the search time.
+      -- if we put the player in check add check value.
+      -- if we put the player in mate, set to MATE value.
+      if(kf.probablyInCheck(nmoves[j], npos.board)) then
+         val = val + kf.CHECK_BONUS
+         if(kf.kingEndangered(npos,nmoves[j])) then
+            val = val + kf.KING_ENDANGERED
+         end
+      end
      
       --print("value of OPP " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
       if(val > bestscore) then
@@ -501,8 +579,15 @@ function KF.max(pos,color)
       -- Make the move and see my position after the opponent makes their best move.
       -- This score is in terms of BLACK's best move. So we will try to minimize this.
       local val = KF.min(pos, moves[i])
+
+      -- bonus, if we check the king or even pin them.
       if(KF.probablyInCheck(moves[i],pos.board)) then
          val = val - KF.CHECK_BONUS
+
+         -- This is optional as well. It's a good idea to keep the above line to force checkmate.
+         if(kf.kingEndangered(pos,moves[i])) then
+            val = val - kf.KING_ENDANGERED
+         end
       end
       table.insert(results,{moves[i],val})
  
