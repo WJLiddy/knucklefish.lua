@@ -17,17 +17,19 @@ local KF = {}
 KF.MATE_VALUE = 30000
 
 -- A little bonus for checking the king, which is usually a good move.
--- Worth more than a pawn.
-KF.CHECK_BONUS = 200
+-- Worth about half a pawn.
+KF.CHECK_BONUS = 100
 
 -- This is a value that could imply the king is in checkmate.
 -- It means that A. the king is in check, and B. has nowhere to move.
 -- Checkmate is inevitable unless we have a piece that can un-pin the king.
 
--- On offense, try to get this state if it costs about half a pawn
+-- On offense, try to get this state, even if it costs a pawn. Could ruin tempo of opponent.
 KF.KING_ENDANGERED_OFFENSE = 200
+
 -- On defense, up the stakes a little more
-KF.KING_ENDANGERED_DEFENSE = 500
+-- example: don't take rooks and bishops if it would put the king in danger.
+KF.KING_ENDANGERED_DEFENSE = 1000
 
 -- Our board is represented as a 120 character string. The padding allows for
 -- fast detection of moves that don't stay within the board.
@@ -329,7 +331,7 @@ function KF.Position:genMoves(cover)
                -- No sliding after captures
                if KF.islower(q) then
                   -- UNLESS you're in cover mode! in which case we can move through the king (think rooks)
-                  if(not cover or q == "k") then
+                  if(not cover or q ~= "k") then
                      break
                   end
                end
@@ -513,18 +515,17 @@ function KF.kingEndangered(pos,move)
    kdirs[kbase] = true
    for n=1,#kf.directions.K do
       local loc = kbase + kf.directions.K[n]
-      --print(string.sub(pos.board,loc,loc))
       if(string.sub(pos.board,loc,loc) == "." or kf.isupper(string.sub(pos.board,loc,loc))) then
          -- king can move or take here
          kdirs[loc] = true
       end
    end
-
+   
    -- see if we can move to any of king's positions.
    local l = pos:genMoves(true)
 
    for n=1,#l do
-      kdirs[l[n][2] + 1] = false
+      kdirs[l[n][2] + __1] = false
    end
 
    -- fixold board.
