@@ -3,15 +3,16 @@
 
 kf = require "knucklefish"
 
-local file = io.open("history.txt", "rb")
-prevstatesraw = file:read("*a")
-file.close()
+
+--local file = io.open("history.txt", "rb")
+--prevstatesraw = file:read("*a")
+--file.close()
 board_state = arg[1]
 to_move = arg[2]
 prevstates = {}
-for token in string.gmatch(prevstatesraw, "[^|]+") do
-   table.insert(prevstates,token)
-end
+--for token in string.gmatch(prevstatesraw, "[^|]+") do
+--   table.insert(prevstates,token)
+--end
 
 
 border  =
@@ -48,7 +49,7 @@ if(to_move == "b") then
   pos = pos:rotate()
 end
 
-move = kf.search(pos, prevstates)
+move = kf.search(pos, prevstates,to_move)
 
 if(to_move == "b") then
   print(kf.longalg(119-move[1]) .. kf.longalg(119 - move[2]))

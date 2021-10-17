@@ -6,6 +6,11 @@
 -- try to make a move that's at least somewhat reasonable, maybe.
 -- be okay-ish in the endgame
 
+-- It plays somewhat poorly. It won't blunder pieces, but it can often get into siuations
+-- where it loses material quickly. It will probably win against beginners.
+
+-- But again, it's fast, easy to use, and in LUA :)
+
 local KF = {}
 
 -- Mate value must be greater than 8*queen + 2*(rook+knight+bishop)
@@ -123,8 +128,8 @@ KF.pst = {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 }
 
--- A rook poisition move is good for about 20
--- Value kings at ~50 ish?
+-- A rook move is good for about 20 points.
+-- Value cornering kings at ~50 ish?
 KF.king_endgame_pst = 
 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -139,8 +144,8 @@ KF.king_endgame_pst =
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
--- so this score is used for both pawns sides ->
--- try to encourage late game pawns to move up
+-- try to encourage late game pawns to move up.
+-- this undervalues opponent pawns, but that's probably fine..
 KF.pawn_endgame_pst = 
 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -148,8 +153,8 @@ KF.pawn_endgame_pst =
 0, 218, 218, 218, 218, 218, 218, 218, 218, 0,
 0, 208, 208, 208, 208, 208, 208, 208, 208, 0,
 0, 198, 198, 198, 198, 198, 198, 198, 198, 0,
-0, 198, 198, 198, 198, 198, 198, 198, 198, 0,
-0, 208, 208, 208, 208, 208, 208, 208, 208, 0,
+0, 188, 188, 188, 188, 188, 188, 188, 188, 0,
+0, 178, 178, 178, 178, 178, 178, 178, 178, 0,
 0, 218, 218, 218, 218, 218, 218, 218, 218, 0,
 0, 238, 238, 238, 238, 238, 238, 238, 238, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -202,9 +207,7 @@ KF.pieceConv = {
 function KF.endgame(board)
    --  Count all major and minor on the board.
    --  If it's seven or less, it's the endgame.
-   --  So Like, RQR vs RQRB
-   --  or
-   --  QR vs BKKBRR
+   --  So Like, RQR vs RQRB or QR vs BKKBRR
    local pieces = "QNRBqrnb"
    local count = 0
    for i=1,#pieces do
@@ -382,7 +385,6 @@ end
 
 -- Check if a non-pawn puts a king in check.
 -- In the end game, this is crucial for forcing a checkmate.
-
 function KF.probablyInCheck(move,board)
    assert(move) -- move is zero-indexed
    -- Piece is at i, but went to "n"
@@ -458,7 +460,7 @@ function KF.Position:value(move)
    return score
 end
 
--- do not have our pieces in the same state twice.
+-- do not have our pieces in the same game state twice.
 -- makes sure we never get 3-rep'd
 function KF.stripWhite(board)
   alts = "KQRPNB"
@@ -482,7 +484,8 @@ function KF.min(pos, move)
    -- pick the best move we can, remember that reverse() was called.
    for j=1,#nmoves do
       local val = (npos.score + npos:value(nmoves[j]))
-     -- print("value of BLACK " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
+     
+      --print("value of OPP " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
       if(val > bestscore) then
          bestscore = val
       end
@@ -491,7 +494,7 @@ function KF.min(pos, move)
 end
 
 
-function KF.max(pos)
+function KF.max(pos,color)
    local moves = pos:genMoves()
    local results = {}
    for i=1,#moves do 
@@ -499,10 +502,16 @@ function KF.max(pos)
       -- This score is in terms of BLACK's best move. So we will try to minimize this.
       local val = KF.min(pos, moves[i])
       if(KF.probablyInCheck(moves[i],pos.board)) then
-         val = val + KF.CHECK_BONUS
+         val = val - KF.CHECK_BONUS
       end
       table.insert(results,{moves[i],val})
-      --print("RESULT -- value of WHITE " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
+ 
+      --debug:
+      --if(color == "b") then
+      --print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
+      --else
+      --print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
+       --end 
    end
 
    table.sort(results,KF.compare)
@@ -520,20 +529,16 @@ function KF.not_repeated(board_stripped, states)
 end
 
 -- Original version of sunfish used iterative deepening MTD-bi search.
-
 -- We only do minimax, two plies - really can't afford any more for speed!
-
 -- We also never return to a previous position that our pieces have held, this makes threefold repetition unlikely.
 -- It also greatly improves the endgame, by forcing our little 2 ply engine to look ahead and move pieces up.
-
-
-function KF.search(pos, states)
+function KF.search(pos, states, color)
    if(kf.endgame(pos.board)) then
       KF.pst.K = KF.king_endgame_pst
       KF.pst.P = KF.pawn_endgame_pst
    end
    
-   moves = KF.max(pos)
+   moves = KF.max(pos, color)
 
    for i=1,#moves do
       local next_move = kf.stripWhite(pos:move(moves[i][1]).board)
