@@ -383,7 +383,7 @@ function KF.Position:move(move)
    return self.new(board, score, wc, bc, ep, kp):rotate()
 end
 
--- Check if a non-pawn puts a king in check.
+-- Quick check for if a major piece puts the king in check.
 -- In the end game, this is crucial for forcing a checkmate.
 function KF.probablyInCheck(move,board)
    assert(move) -- move is zero-indexed
@@ -507,11 +507,11 @@ function KF.max(pos,color)
       table.insert(results,{moves[i],val})
  
       --debug:
-      if(color == "b") then
-        print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
-      else
-        print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
-      end 
+      --if(color == "b") then
+      --  print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
+      --else
+      -- print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
+      --end 
    end
 
    table.sort(results,KF.compare)
@@ -542,7 +542,20 @@ function KF.search(pos, states, color)
 
    for i=1,#moves do
       local next_move = kf.stripWhite(pos:move(moves[i][1]).board)
-      if(kf.not_repeated(next_move, states)) then
+      -- Look through every move.
+      -- Do not make a move that will put us into checkmate.
+      if(moves[i][2] < kf.MATE_VALUE) then
+         if(kf.not_repeated(next_move, states)) then
+            return moves[i][1]
+         end
+      end
+    end
+
+   -- At this point, there were no new moves that did not put us into checkmate.
+   -- So, repeated moves are tolerated here only.
+   for i=1,#moves do
+      -- play the best move that isn't mate.
+      if(moves[i][2] < kf.MATE_VALUE) then
          return moves[i][1]
       end
     end
