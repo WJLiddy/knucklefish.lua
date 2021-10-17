@@ -26,7 +26,10 @@ KF.CHECK_BONUS = 50
 -- Checkmate is inevitable unless we have a piece that can un-pin the king.
 -- So avoid this state at all costs.
 
-KF.KING_ENDANGERED = 5000
+-- On offense, try to get this state if it costs about half a pawn
+KF.KING_ENDANGERED_OFFENSE = 500
+-- On defense, AVOID THIS STATE as much as possible, we're probably in mate.
+KF.KING_ENDANGERED_DEFENSE = 3000
 
 
 -- Our board is represented as a 120 character string. The padding allows for
@@ -294,12 +297,14 @@ function KF.Position:genMoves(cover)
 
                -- No friendly captures
                if KF.isupper(q) then
-                  -- used for checkmate detection - if king takes the square they die anyway
+                  -- used for likely checkmate detection - if king takes the square they die anyway
                   if(cover) then
                      table.insert(moves, {i, j})
                   end
                   break
                end
+
+
 
                -- Special pawn stuff
                if p == "P" then
@@ -330,7 +335,10 @@ function KF.Position:genMoves(cover)
                end
                -- No sliding after captures
                if KF.islower(q) then
-                  break
+                  -- UNLESS you're in cover mode! in which case backing up as the king wont protect you!
+                  if(not cover and q == "k") then
+                     break
+                  end
                end
             end
          end
@@ -559,11 +567,11 @@ function KF.min(pos, move)
       if(kf.probablyInCheck(nmoves[j], npos.board)) then
          val = val + kf.CHECK_BONUS
          if(kf.kingEndangered(npos,nmoves[j])) then
-            val = val + kf.KING_ENDANGERED
+            val = val + kf.KING_ENDANGERED_DEFENSE
          end
       end
      
-      --print("value of OPP " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
+      print("value of OPP " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
       if(val > bestscore) then
          bestscore = val
       end
@@ -584,19 +592,18 @@ function KF.max(pos,color)
       if(KF.probablyInCheck(moves[i],pos.board)) then
          val = val - KF.CHECK_BONUS
 
-         -- This is optional as well. It's a good idea to keep the above line to force checkmate.
+         -- This is optional as well. It's a good idea to provide a small incetive if we think we can checkmate.
          if(kf.kingEndangered(pos,moves[i])) then
-            val = val - kf.KING_ENDANGERED
+            val = val - kf.KING_ENDANGERED_OFFENSE
          end
       end
       table.insert(results,{moves[i],val})
  
-      --debug:
-      --if(color == "b") then
-      --  print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
-      --else
-      -- print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
-      --end 
+      if(color == "b") then
+        print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
+      else
+       print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
+      end 
    end
 
    table.sort(results,KF.compare)
