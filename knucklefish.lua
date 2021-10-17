@@ -336,7 +336,7 @@ function KF.Position:genMoves(cover)
                -- No sliding after captures
                if KF.islower(q) then
                   -- UNLESS you're in cover mode! in which case backing up as the king wont protect you!
-                  if(not cover and q == "k") then
+                  if(not cover or q == "k") then
                      break
                   end
                end
@@ -650,6 +650,7 @@ function KF.search(pos, states, color)
          return moves[i][1]
       end
     end
+
    return nil
 end
 
