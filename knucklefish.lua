@@ -1,8 +1,10 @@
 -- knucklefish.lua. a chess AI based on https://github.com/thomasahle/sunfish,
 -- but optimized to:
--- use as few instructions as possible
+-- use as few instructions as possible! This is so it can be embedded in games.
+-- be somewhat simple to understand - using piece square tables and simple minimax searches.
 -- return a move that's always legal
 -- try to make a move that's at least somewhat reasonable, maybe.
+-- be okay-ish in the endgame
 
 local KF = {}
 
@@ -118,6 +120,23 @@ KF.pst = {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 }
+
+-- A rook poisition move is good for about 20
+-- Value kings at ~50 ish?
+KF.king_endgame_pst = 
+{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 60000, 60040, 60080, 60100, 60100, 60080, 60040, 60000, 0,
+0, 60040, 60100, 60120, 60140, 60140, 60120, 60100, 60040, 0,
+0, 60080, 60120, 60140, 60160, 60160, 60140, 60120, 60080, 0,
+0, 60100, 60140, 60160, 60180, 60180, 60160, 60140, 60100, 0,
+0, 60100, 60140, 60160, 60180, 60180, 60160, 60140, 60100, 0,
+0, 60080, 60120, 60140, 60160, 60160, 60140, 60120, 60080, 0,
+0, 60040, 60100, 60120, 60140, 60140, 60120, 60100, 60040, 0,
+0, 60000, 60040, 60080, 60100, 60100, 60080, 60040, 60000, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
 -------------------------------------------------------------------------------
 -- Chess logic
 -------------------------------------------------------------------------------
@@ -160,6 +179,22 @@ KF.pieceConv = {
    [" "] = " ",
    ["\n"] = "\n"
 }
+
+
+function KF.endgame(board)
+   --  Count all major and minor on the board.
+   --  If it's seven or less, it's the endgame.
+   --  So Like, RQR vs RQRB
+   --  or
+   --  QR vs BKKBRR
+   local pieces = "QNRBqrnb"
+   local count = 0
+   for i=1,#pieces do
+      local _,r = board:gsub(string.sub(pieces,i,i),"")
+      count = count + r
+   end
+   return (count <= 7)
+end
 
 -- since lua strings are immutable, conv to byte array
 function KF.swapcase(s)
@@ -425,6 +460,12 @@ end
 
 
 function KF.search(pos, states)
+   if(kf.endgame(pos.board)) then
+      print("endgame")
+      KF["pst"].K = KF.king_endgame_pst
+   end
+
+   
    moves = KF.max(pos)
 
    for i=1,#moves do

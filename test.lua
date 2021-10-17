@@ -85,4 +85,4 @@ function BOTvBOT(printboard, timing, profile, i)
 end
 
 -- Test function
-BOTvBOT(false, false, true, 30)
+BOTvBOT(true, true, false, 200)
