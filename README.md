@@ -29,4 +29,5 @@ The careful:tm: mode adds more processing time but uses a checkmate heuristic to
 Check it out on LiChess: https://lichess.org/@/knucklefish
 
 It does poorly against its fellow bots, which are usually souped up stockfish instances that tend to look past more than two plies. But it tries its best :)
+
 Most of the time the bot seems to lose from taking progressively worse trades, which I will accept.
