@@ -22,8 +22,8 @@ print(kf.longalg(move[1]) .. kf.longalg(move[2]))
 
 (see attached test.lua)
 
-The careful:tm: mode adds more processing time but uses a checkmate heuristic to avoid making blunders like this:
-![image](https://user-images.githubusercontent.com/8826899/137646943-b4741c33-a3bf-4ac0-b1b3-f9a2ea5afefa.png)
+The careful:tm: mode adds more processing time but uses a checkmate heuristic to avoid making obvious blunders like this:
+![image](https://user-images.githubusercontent.com/8826899/137647926-5a684a6f-f71e-4b7d-bc2b-63347bddf4da.png)
 
 
 Check it out on LiChess: https://lichess.org/@/knucklefish
