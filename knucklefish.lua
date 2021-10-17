@@ -482,9 +482,6 @@ function KF.min(pos, move)
    -- pick the best move we can, remember that reverse() was called.
    for j=1,#nmoves do
       local val = (npos.score + npos:value(nmoves[j]))
-      if(KF.probablyInCheck(nmoves[j],npos.board)) then
-         val = val + KF.CHECK_BONUS
-      end
      -- print("value of BLACK " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
       if(val > bestscore) then
          bestscore = val
@@ -501,6 +498,9 @@ function KF.max(pos)
       -- Make the move and see my position after the opponent makes their best move.
       -- This score is in terms of BLACK's best move. So we will try to minimize this.
       local val = KF.min(pos, moves[i])
+      if(KF.probablyInCheck(moves[i],pos.board)) then
+         val = val + KF.CHECK_BONUS
+      end
       table.insert(results,{moves[i],val})
       --print("RESULT -- value of WHITE " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
    end
