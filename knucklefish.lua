@@ -13,6 +13,8 @@ local KF = {}
 -- 8 queens up, but we got the king, we still exceed MATE_VALUE.
 KF.MATE_VALUE = 30000
 
+KF.CHECK_BONUS = 50
+
 -- Our board is represented as a 120 character string. The padding allows for
 -- fast detection of moves that don't stay within the board.
 KF.A1, KF.H1, KF.A8, KF.H8 = 91, 98, 21, 28
@@ -134,6 +136,22 @@ KF.king_endgame_pst =
 0, 60080, 60120, 60140, 60160, 60160, 60140, 60120, 60080, 0,
 0, 60040, 60100, 60120, 60140, 60140, 60120, 60100, 60040, 0,
 0, 60000, 60040, 60080, 60100, 60100, 60080, 60040, 60000, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+-- so this score is used for both pawns sides ->
+-- try to encourage late game pawns to move up
+KF.pawn_endgame_pst = 
+{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 238, 238, 238, 238, 238, 238, 238, 238, 0,
+0, 218, 218, 218, 218, 218, 218, 218, 218, 0,
+0, 208, 208, 208, 208, 208, 208, 208, 208, 0,
+0, 198, 198, 198, 198, 198, 198, 198, 198, 0,
+0, 198, 198, 198, 198, 198, 198, 198, 198, 0,
+0, 208, 208, 208, 208, 208, 208, 208, 208, 0,
+0, 218, 218, 218, 218, 218, 218, 218, 218, 0,
+0, 238, 238, 238, 238, 238, 238, 238, 238, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
@@ -309,6 +327,7 @@ function KF.Position:rotate()
    return self.new(KF.swapcase(self.board:reverse()), -self.score, self.bc, self.wc, 119 - self.ep, 119 - self.kp)
 end
 
+
 function KF.Position:move(move)
    assert(move) -- move is zero-indexed
    local i, j = move[0 + __1], move[1 + __1]
@@ -361,6 +380,50 @@ function KF.Position:move(move)
    return self.new(board, score, wc, bc, ep, kp):rotate()
 end
 
+-- Check if a non-pawn puts a king in check.
+-- In the end game, this is crucial for forcing a checkmate.
+
+function KF.probablyInCheck(move,board)
+   assert(move) -- move is zero-indexed
+   -- Piece is at i, but went to "n"
+   local i, n = move[0 + __1], move[1 + __1]
+   local p = board:sub(i + __1, i + __1)
+   assert(p)
+
+   -- dont deal with pawns lol
+   if(p == "P") then
+      return false
+   end
+
+-- Piece "P" has gone to "n".
+-- Check if this put the king in check.
+-- get all directions for piece
+   for z=1,#(KF.directions[p]) do
+      local d = KF.directions[p][z]
+      local limit = (n + d) + (10000) * d -- fake limit
+      for j = n + d, limit, d do
+         -- new piece position: "q"
+         local q = board:sub(j + __1, j + __1)
+
+         -- Ran into a King? YES!
+         if q == "k" then
+            return true
+         end
+
+         --hit something..
+         if (q ~= ".") then
+            break
+         end
+
+         -- Stop crawlers from sliding
+         if p == "P" or p == "N" or p == "K" then
+            break
+         end
+      end
+   end
+   return false
+end
+
 function KF.Position:value(move)
    local i, j = move[0 + __1], move[1 + __1]
    local p, q = self.board:sub(i + __1, i + __1), self.board:sub(j + __1, j + __1)
@@ -395,6 +458,8 @@ function KF.Position:value(move)
    return score
 end
 
+-- do not have our pieces in the same state twice.
+-- makes sure we never get 3-rep'd
 function KF.stripWhite(board)
   alts = "KQRPNB"
   local nboard = board
@@ -417,6 +482,9 @@ function KF.min(pos, move)
    -- pick the best move we can, remember that reverse() was called.
    for j=1,#nmoves do
       local val = (npos.score + npos:value(nmoves[j]))
+      if(KF.probablyInCheck(nmoves[j],npos.board)) then
+         val = val + KF.CHECK_BONUS
+      end
      -- print("value of BLACK " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
       if(val > bestscore) then
          bestscore = val
@@ -461,10 +529,9 @@ end
 
 function KF.search(pos, states)
    if(kf.endgame(pos.board)) then
-      print("endgame")
-      KF["pst"].K = KF.king_endgame_pst
+      KF.pst.K = KF.king_endgame_pst
+      KF.pst.P = KF.pawn_endgame_pst
    end
-
    
    moves = KF.max(pos)
 
