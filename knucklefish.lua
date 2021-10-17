@@ -59,7 +59,7 @@ KF.pst = {
         0, 178, 198, 198, 198, 198, 198, 198, 178, 0,
         0, 178, 198, 198, 198, 198, 198, 198, 178, 0,
         0, 178, 198, 208, 218, 218, 208, 198, 178, 0,
-        0, 178, 198, 218, 238, 238, 218, 198, 178, 0,
+        0, 178, 198, 218, 298, 298, 218, 198, 178, 0,
         0, 178, 198, 208, 218, 218, 208, 198, 178, 0,
         0, 178, 198, 198, 198, 198, 198, 198, 178, 0,
         0, 198, 198, 198, 198, 198, 198, 198, 198, 0,
@@ -206,15 +206,15 @@ KF.pieceConv = {
 
 function KF.endgame(board)
    --  Count all major and minor on the board.
-   --  If it's seven or less, it's the endgame.
-   --  So Like, RQR vs RQRB or QR vs BKKBRR
+   --  If it's six or less, it's the endgame.
+   --  So Like, RQR vs RQB or R vs BKKBRR
    local pieces = "QNRBqrnb"
    local count = 0
    for i=1,#pieces do
       local _,r = board:gsub(string.sub(pieces,i,i),"")
       count = count + r
    end
-   return (count <= 7)
+   return (count <= 6)
 end
 
 -- since lua strings are immutable, conv to byte array
@@ -507,11 +507,11 @@ function KF.max(pos,color)
       table.insert(results,{moves[i],val})
  
       --debug:
-      --if(color == "b") then
-      --print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
-      --else
-      --print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
-       --end 
+      if(color == "b") then
+        print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
+      else
+        print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
+      end 
    end
 
    table.sort(results,KF.compare)
