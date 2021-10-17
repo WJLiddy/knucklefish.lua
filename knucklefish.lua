@@ -510,7 +510,7 @@ function KF.kingEndangered(pos,move)
    -- move's applied.
 
    
-   kf.printboard(pos.board)
+   --kf.printboard(pos.board)
 
    -- Here are the king's options.
    local kbase = string.find(pos.board,"k")
@@ -545,7 +545,7 @@ function KF.kingEndangered(pos,move)
       end
    end
 
-   print("mate possible")
+   --print("mate possible")
    return true
 
 end
@@ -571,7 +571,6 @@ function KF.min(pos, move)
          end
       end
      
-      print("value of OPP " .. KF.longalg(nmoves[j][1]) .. KF.longalg(nmoves[j][2]) .. " is " .. val)
       if(val > bestscore) then
          bestscore = val
       end
@@ -599,11 +598,11 @@ function KF.max(pos,color)
       end
       table.insert(results,{moves[i],val})
  
-      if(color == "b") then
-        print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
-      else
-       print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
-      end 
+      --if(color == "b") then
+      --  print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
+      --else
+      -- print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
+      --end 
    end
 
    table.sort(results,KF.compare)
