@@ -9,12 +9,7 @@ and it's in LUA baybee
 
 This is a tiny chess AI that you can embed in your games and things. It can defeat most beginners, but struggles past that.
 
-
-It's usable in it's current state. Other things in the future though:
-
-- Clean up past state interface
-- Consider searching additional plies into the most promising moves. Speed is prioritized, but sometimes it will make moves that look promising on the surface which allows it to be defeated by anyone with basic theory.
-
+It's very easy to use - see attached test.lua
 
 Check it out on LiChess: https://lichess.org/@/knucklefish
 
