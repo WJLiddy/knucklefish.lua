@@ -2,7 +2,7 @@ Knucklefish.lua
 ===========
 
 It plays chess.
-It runs fast (under 20 ms/move for the basic version, around 40ms with careful :tm: mode enabled).
+It runs fast (around 15 ms/move for the basic version, a few more with careful :tm: mode enabled).
 It makes legal moves.
 It doesn't blunder too bad.
 and it's in LUA baybee.
