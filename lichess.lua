@@ -1,5 +1,5 @@
 -- lichess harness, though will probably work with other engines with minor tweaks.
--- you may want to poach convertFEN() for your project.
+-- You probably have no use for this, except that you may want to poach convertFEN() for your project.
 
 kf = require "knucklefish"
 
@@ -32,6 +32,11 @@ end
 -- read from "history.txt" which contains previous positions.
 function readHistory()
   local file = io.open("history.txt", "rb")
+  if file==nil then
+    -- Could not read history, no problem.
+    -- Silent failure here not ideal but w/e
+    return {}
+  end
   local prevstatesraw = file:read("*a")
   file.close()
   local ret = {}
@@ -50,6 +55,9 @@ prevstates = {}
 -- Works 99% of the time on lichess for now, though.
 local pos = kf.Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
 
+pos.board = convertFEN(board_state_fen)
+prevstates = readHistory()
+
 if(to_move == "b") then
   pos = pos:rotate()
 end
@@ -65,4 +73,4 @@ else
   print(kf.longalg(move[1]) .. kf.longalg(move[2]))
 end
 
-print("|"..kf.stripWhite(pos:move(move).board))
+print("|"..kf.stripOppPieces(pos:move(move).board))
