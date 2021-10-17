@@ -24,12 +24,11 @@ KF.CHECK_BONUS = 200
 
 
 
--- !! Experiemntal
+-- !! Experimental:
 
 -- This is a value that could HEAVILY IMPLY the king is in checkmate.
 -- It means that A. the king is in check, and B. has nowhere to move.
 -- Checkmate is inevitable unless we have a piece that can un-pin the king.
--- So avoid this state at all costs.
 
 -- On offense, try to get this state if it costs about half a pawn
 KF.KING_ENDANGERED_OFFENSE = 200
