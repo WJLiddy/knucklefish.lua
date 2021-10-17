@@ -450,7 +450,7 @@ function KF.endgame(board)
 end
 
 -- Quick check for if a major or minor piece puts king in check
--- This function is very expensive, so we ignore pawn moves which aren't likely to do anything.
+-- This function expensive, so we ignore pawn moves which aren't likely to do anything.
 -- This function is important for not stalemating the endgame and using careful mode
 function KF.probablyInCheck(move,board)
    -- Piece is at i, but went to "n"
@@ -492,6 +492,7 @@ function KF.probablyInCheck(move,board)
 end
 
 -- Check for if a king has no safe place to move
+-- This function is VERY expensive.
 -- This likely means they are in checkmate. The only way they can avoid this
 -- is if one of their pieces rescues them. Speed over accuracy.
 function KF.kingEndangered(pos,move)
@@ -643,7 +644,7 @@ function KF.search(pos, states, careful)
       KF.pst.P = KF.pawn_endgame_pst
    end
 
-   local moves = KF.max(pos, color)
+   local moves = KF.max(pos, careful)
 
    for i=1,#moves do
       local next_move = kf.stripOppPieces(pos:move(moves[i][1]).board)
@@ -667,7 +668,6 @@ function KF.search(pos, states, careful)
 
    return nil
 end
-
 
 -- PRINT FUNCTIONS --
 ----------------------

@@ -41,9 +41,9 @@ function BOTvBOT(cutoff, w_careful, b_careful, timing, printboard, profile)
 
       if(timing) then
          time = math.floor(1000 * (socket.gettime() - starttime))
-         print("Plies left " .. tostring(plies) .. ": " .. tostring(time) .. "ms")
-         if(time > peak) then
-            peak = time
+         print("Ply " .. tostring(plies) .. ": " .. tostring(time) .. "ms")
+         if(time > peak_time) then
+            peak_time = time
          end
       end
 
@@ -55,7 +55,7 @@ function BOTvBOT(cutoff, w_careful, b_careful, timing, printboard, profile)
          else
             print("Black wins.")
          end
-         return
+         break
       else
 
          print(kf.longalg(move[1]) .. kf.longalg(move[2]))
@@ -63,14 +63,14 @@ function BOTvBOT(cutoff, w_careful, b_careful, timing, printboard, profile)
          pos = pos:move(move)
 
          if(white_turn) then
-            table.insert(wexplored,kf.stripWhite(pos.board))
+            table.insert(wexplored,kf.stripOppPieces(pos.board))
             if(printboard) then
-               kf.printboard(pos:rotate().board)
+               print(pos:rotate().board)
             end
          else
-            table.insert(bexplored,kf.stripWhite(pos.board))
+            table.insert(bexplored,kf.stripOppPieces(pos.board))
             if(printboard) then
-               kf.printboard(pos.board)
+               print(pos.board)
             end
          end
 
@@ -84,9 +84,9 @@ function BOTvBOT(cutoff, w_careful, b_careful, timing, printboard, profile)
    end
 
    if(timing) then
-      print("peak " .. tostring(peak_time) .. "ms")
+      print("peak search time:" .. tostring(peak_time) .. "ms")
    end
 end
 
 -- Test function
-BOTvBOT(100,true,true,true)
+BOTvBOT(10,true,true,true)
