@@ -3,13 +3,11 @@
 -- use as few instructions as possible! This is so it can be embedded in games.
 -- be somewhat simple to understand - using piece square tables and simple minimax searches.
 -- return a move that's always legal
--- try to make a move that's at least somewhat reasonable, maybe.
+-- try to make a move that's at least somewhat reasonable, maybe, without threefold repeition'ing
 -- be okay-ish in the endgame
 
 -- It plays somewhat poorly. It won't blunder pieces, but it can often get into siuations
 -- where it loses material quickly. It will probably win against beginners.
-
--- But again, it's fast, easy to use, and in LUA :)
 
 local KF = {}
 
@@ -22,11 +20,7 @@ KF.MATE_VALUE = 30000
 -- Worth more than a pawn.
 KF.CHECK_BONUS = 200
 
-
-
--- !! Experimental:
-
--- This is a value that could HEAVILY IMPLY the king is in checkmate.
+-- This is a value that could imply the king is in checkmate.
 -- It means that A. the king is in check, and B. has nowhere to move.
 -- Checkmate is inevitable unless we have a piece that can un-pin the king.
 
@@ -34,7 +28,6 @@ KF.CHECK_BONUS = 200
 KF.KING_ENDANGERED_OFFENSE = 200
 -- On defense, up the stakes a little more
 KF.KING_ENDANGERED_DEFENSE = 500
-
 
 -- Our board is represented as a 120 character string. The padding allows for
 -- fast detection of moves that don't stay within the board.
@@ -54,10 +47,9 @@ KF.initial =
     '         \n' .. -- 100 -109
     '          '     -- 110 -119
 
-__1 = 1 -- 1-index correction
--------------------------------------------------------------------------------
--- Move and evaluation tables
--------------------------------------------------------------------------------
+__1 = 1 -- 1-index correction, holdover from sunfish.lua
+
+-- direction for each piece
 KF.N, KF.E, KF.S, KF.W = -10, 1, 10, -1
 KF.directions = {
     P = {KF.N, 2*KF.N, KF.N+KF.W, KF.N+KF.E},
@@ -68,6 +60,7 @@ KF.directions = {
     K = {KF.N, KF.E, KF.S, KF.W, KF.N+KF.E, KF.S+KF.E, KF.S+KF.W, KF.N+KF.W}
 }
 
+-- piece square table
 KF.pst = {
     P = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -144,8 +137,7 @@ KF.pst = {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 }
 
--- A rook move is good for about 20 points.
--- Value cornering kings at ~50 ish?
+-- endgame piece square tables
 KF.king_endgame_pst = 
 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -160,7 +152,7 @@ KF.king_endgame_pst =
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
--- try to encourage late game pawns to move up.
+-- try to encourage late game pawns to move up:
 -- this undervalues opponent pawns, but that's probably fine..
 KF.pawn_endgame_pst = 
 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -176,9 +168,10 @@ KF.pawn_endgame_pst =
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
--------------------------------------------------------------------------------
--- Chess logic
--------------------------------------------------------------------------------
+-- BOARD UTILITY THINGS --
+--------------------------
+
+-- check if square is not on the board
 function KF.isspace(s)
    if s == " " or s == "\n" then
       return true
@@ -187,6 +180,7 @@ function KF.isspace(s)
    end
 end
 
+-- check if square belongs to the player that is about to move
 function KF.isupper(s)
    if s == "." or s == " " or s == "\n" then
       return false
@@ -194,6 +188,7 @@ function KF.isupper(s)
    return s:upper() == s
 end
 
+-- check if square belongs to other player
 function KF.islower(s)
    if s == "." or s == " " or s == "\n" then
       return false
@@ -201,6 +196,7 @@ function KF.islower(s)
    return s:lower() == s
 end
 
+-- helper for "swapcase"
 KF.pieceConv = {
    ["k"] = "K",
    ["r"] = "R",
@@ -219,21 +215,8 @@ KF.pieceConv = {
    ["\n"] = "\n"
 }
 
-
-function KF.endgame(board)
-   --  Count all major and minor on the board.
-   --  If it's six or less, it's the endgame.
-   --  So Like, RQR vs RQB or R vs BKKBRR
-   local pieces = "QNRBqrnb"
-   local count = 0
-   for i=1,#pieces do
-      local _,r = board:gsub(string.sub(pieces,i,i),"")
-      count = count + r
-   end
-   return (count <= 6)
-end
-
--- since lua strings are immutable, conv to byte array
+-- since lua strings are immutable, conv to byte array, this is faster than sub()
+-- by swapping character case we change the active player
 function KF.swapcase(s)
    tbl = {string.byte(s, 1, -1)}
    vout = {}
@@ -243,6 +226,10 @@ function KF.swapcase(s)
    return table.concat(vout)
 end
 
+-- POSITION CLASS --
+--------------------
+
+-- Position class: holds board state, en passant status, castling status
 KF.Position = {}
 
 function KF.Position.new(board, score, wc, bc, ep, kp) --
@@ -253,7 +240,8 @@ function KF.Position.new(board, score, wc, bc, ep, kp) --
       bc -- the opponent castling rights
       ep - the en passant square
       kp - the king passant square
-   ]] local self = {}
+   ]] 
+   local self = {}
    self.board = board
    self.score = score
    self.wc = wc
@@ -266,7 +254,9 @@ function KF.Position.new(board, score, wc, bc, ep, kp) --
    return self
 end
 
--- WILL put king into check.
+-- Generate all possible moves for a player. Note: will move the king into check, which is not a legal move.
+-- If "cover" is true, then we allow player to move through the enemy king and project moves onto other pieces.
+-- Used for checkmate heuristic in careful mode
 function KF.Position:genMoves(cover)
    local moves = {}
    -- For each of our pieces, iterate through each possible 'ray' of moves,
@@ -308,8 +298,6 @@ function KF.Position:genMoves(cover)
                   break
                end
 
-
-
                -- Special pawn stuff
                if p == "P" then
                   -- no moving left or right if space is empty
@@ -332,14 +320,15 @@ function KF.Position:genMoves(cover)
 
                -- Move it
                table.insert(moves, {i, j})
-               -- print(i, j)
+
                -- Stop crawlers from sliding
                if p == "P" or p == "N" or p == "K" then
                   break
                end
+
                -- No sliding after captures
                if KF.islower(q) then
-                  -- UNLESS you're in cover mode! in which case backing up as the king wont protect you!
+                  -- UNLESS you're in cover mode! in which case we can move through the king (think rooks)
                   if(not cover or q == "k") then
                      break
                   end
@@ -351,16 +340,21 @@ function KF.Position:genMoves(cover)
    return moves
 end
 
+-- helper, move board to other player side.
 function KF.Position:rotate()
    return self.new(KF.swapcase(self.board:reverse()), -self.score, self.bc, self.wc, 119 - self.ep, 119 - self.kp)
 end
 
+-- helper, put piece on board
+function KF.put(board, i, p)
+   return board:sub(1, i - 1) .. p .. board:sub(i + 1)
+end
 
+-- apply move to position and update score.
 function KF.Position:move(move)
    assert(move) -- move is zero-indexed
    local i, j = move[0 + __1], move[1 + __1]
    local p, q = self.board:sub(i + __1, i + __1), self.board:sub(j + __1, j + __1)
-
    -- Copy variables and reset ep and kp
    local board = self.board
    local wc, bc, ep, kp = self.wc, self.bc, 0, 0
@@ -406,48 +400,7 @@ function KF.Position:move(move)
    return self.new(board, score, wc, bc, ep, kp):rotate()
 end
 
--- Quick check for if a major piece puts the king in check.
--- This function is expensive, so we ignore pawn moves which aren't likely to do anything.
--- In the end game, this is crucial for forcing a checkmate.
-function KF.probablyInCheck(move,board)
-   -- Piece is at i, but went to "n"
-   local i, n = move[0 + __1], move[1 + __1]
-   local p = board:sub(i + __1, i + __1)
-
-   -- dont deal with pawns lol
-   if(p == "P") then
-      return false
-   end
-
--- Piece "P" has gone to "n".
--- Check if this put the king in check.
--- get all directions for piece
-   for z=1,#(KF.directions[p]) do
-      local d = KF.directions[p][z]
-      local limit = (n + d) + (10000) * d -- fake limit
-      for j = n + d, limit, d do
-         -- new piece position: "q"
-         local q = board:sub(j + __1, j + __1)
-
-         -- Ran into a King? YES!
-         if q == "k" then
-            return true
-         end
-
-         --hit something..
-         if (q ~= ".") then
-            break
-         end
-
-         -- Stop crawlers from sliding
-         if p == "P" or p == "N" or p == "K" then
-            break
-         end
-      end
-   end
-   return false
-end
-
+-- get value of move
 function KF.Position:value(move)
    local i, j = move[0 + __1], move[1 + __1]
    local p, q = self.board:sub(i + __1, i + __1), self.board:sub(j + __1, j + __1)
@@ -482,47 +435,81 @@ function KF.Position:value(move)
    return score
 end
 
--- do not have our pieces in the same game state twice.
--- makes sure we never get 3-rep'd
-function KF.stripWhite(board)
-  alts = "KQRPNB"
-  local nboard = board
-  for i=1,#alts do
-    nboard = string.gsub(nboard,string.sub(alts,i,i),".")
-  end
-  return nboard
+-- AI FUNCTIONS --
+------------------
+
+-- return true if endgame, meaning we should use new PST. Defined as less than seven major or minor pieces.
+function KF.endgame(board)
+   local pieces = "QNRBqrnb"
+   local count = 0
+   for i=1,#pieces do
+      local _,r = board:gsub(string.sub(pieces,i,i),"")
+      count = count + r
+   end
+   return (count <= 6)
 end
 
-function KF.compare(a, b)
-   return a[2] < b[2]
+-- Quick check for if a major or minor piece puts king in check
+-- This function is very expensive, so we ignore pawn moves which aren't likely to do anything.
+-- This function is important for not stalemating the endgame and using careful mode
+function KF.probablyInCheck(move,board)
+   -- Piece is at i, but went to "n"
+   local i, n = move[0 + __1], move[1 + __1]
+   local p = board:sub(i + __1, i + __1)
+
+   -- dont deal with pawns lol
+   if(p == "P") then
+      return false
+   end
+
+-- Piece "P" has gone to "n".
+-- Check if this put the king in check.
+-- See "Position.genMoves"
+   for z=1,#(KF.directions[p]) do
+      local d = KF.directions[p][z]
+      local limit = (n + d) + (10000) * d -- fake limit
+      for j = n + d, limit, d do
+         -- new piece position: "q"
+         local q = board:sub(j + __1, j + __1)
+
+         -- Ran into a King? - they're probably in check
+         if q == "k" then
+            return true
+         end
+
+         -- Hit something that's not an empty space.
+         if (q ~= ".") then
+            break
+         end
+
+         -- Stop crawlers from sliding
+         if p == "P" or p == "N" or p == "K" then
+            break
+         end
+      end
+   end
+   return false
 end
 
-function KF.put(board, i, p)
-   return board:sub(1, i - 1) .. p .. board:sub(i + 1)
-end
-
+-- Check for if a king has no safe place to move
+-- This likely means they are in checkmate. The only way they can avoid this
+-- is if one of their pieces rescues them. Speed over accuracy.
 function KF.kingEndangered(pos,move)
-
    -- first, apply the move.
    local i, j = move[0 + __1], move[1 + __1]
    local p, q = pos.board:sub(i + __1, i + __1), pos.board:sub(j + __1, j + __1)
    
+   --save old board state
    local oldboard = pos.board
 
    pos.board = kf.put(pos.board, j + __1, pos.board:sub(i + __1, i + __1))
    pos.board = kf.put(pos.board, i + __1, ".")
    -- move's applied.
 
-   
-   --kf.printboard(pos.board)
-
    -- Here are the king's options.
    local kbase = string.find(pos.board,"k")
-
    local kdirs = {}
-   --print(pos.board:sub(kbase,kbase)) 
    kdirs[kbase] = true
-
    for n=1,#kf.directions.K do
       local loc = kbase + kf.directions.K[n]
       --print(string.sub(pos.board,loc,loc))
@@ -532,15 +519,14 @@ function KF.kingEndangered(pos,move)
       end
    end
 
-   
-   -- and, see if we are in checkmate.
+   -- see if we can move to any of king's positions.
    local l = pos:genMoves(true)
 
    for n=1,#l do
       kdirs[l[n][2] + 1] = false
    end
 
-   -- put it back.
+   -- fixold board.
    pos.board = oldboard
 
    -- king has an escape
@@ -550,13 +536,17 @@ function KF.kingEndangered(pos,move)
       end
    end
 
-   --print("mate possible")
+   -- king has no escape.
    return true
-
 end
 
+-- custom comparator to compare value of two moves.
+function KF.compare(a, b)
+   return a[2] < b[2]
+end
 
-function KF.min(pos, move)
+-- classic minimax min
+function KF.min(pos, move, careful)
    local npos = pos:move(move)
    local nmoves = npos:genMoves()
    local best = nil
@@ -565,14 +555,15 @@ function KF.min(pos, move)
    for j=1,#nmoves do
       local val = (npos.score + npos:value(nmoves[j]))
 
-      -- OPTIONAL! These few lines greatly improve the survivabilty of the bot,
-      -- But ~doubles the search time.
-      -- if we put the player in check add check value.
-      -- if we put the player in mate, set to MATE value.
-      if(kf.probablyInCheck(nmoves[j], npos.board)) then
-         val = val + kf.CHECK_BONUS
-         if(kf.kingEndangered(npos,nmoves[j])) then
-            val = val + kf.KING_ENDANGERED_DEFENSE
+      -- In careful mode, the min is more likely to pick moves that check or threaten the king.
+      -- So we check for that to avoid moving there.
+      -- However, toggling this mode is somewhat expensive, so it's optional.
+      if(careful) then
+         if(kf.probablyInCheck(nmoves[j], npos.board)) then
+            val = val + kf.CHECK_BONUS
+            if(kf.kingEndangered(npos,nmoves[j])) then
+               val = val + kf.KING_ENDANGERED_DEFENSE
+            end
          end
       end
      
@@ -583,38 +574,44 @@ function KF.min(pos, move)
    return bestscore
 end
 
-
-function KF.max(pos,color)
+-- classic minimax max
+function KF.max(pos,careful)
    local moves = pos:genMoves()
    local results = {}
    for i=1,#moves do 
       -- Make the move and see my position after the opponent makes their best move.
-      -- This score is in terms of BLACK's best move. So we will try to minimize this.
-      local val = KF.min(pos, moves[i])
+      local val = KF.min(pos, moves[i], careful)
 
-      -- bonus, if we check the king or even pin them.
+      -- See if we can check or endanger the king
       if(KF.probablyInCheck(moves[i],pos.board)) then
          val = val - KF.CHECK_BONUS
-
-         -- This is optional as well. It's a good idea to provide a small incetive if we think we can checkmate.
          if(kf.kingEndangered(pos,moves[i])) then
             val = val - kf.KING_ENDANGERED_OFFENSE
          end
       end
       table.insert(results,{moves[i],val})
- 
-      --if(color == "b") then
-      --  print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
-      --else
-      --  print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
-      --end 
    end
 
+   -- sort by lowest first (min returns in terms of opponent material)
    table.sort(results,KF.compare)
    return results
 end
 
+-- CACHING FUNCTIONS --
+-----------------------
 
+-- strip opponent pieces from the board, to be cached later.
+-- this is important for avoiding threefold repetition, bot would constantly stalemate otherwise.
+function KF.stripOppPieces(board)
+   alts = "KQRPNB"
+   local nboard = board
+   for i=1,#alts do
+     nboard = string.gsub(nboard,string.sub(alts,i,i),".")
+   end
+   return nboard
+ end
+ 
+-- return the move is original., that is to say not in cached.
 function KF.not_repeated(board_stripped, states)
    for j=1, #states do
       if(states[j] == board_stripped) then
@@ -624,30 +621,42 @@ function KF.not_repeated(board_stripped, states)
    return true
 end
 
--- Original version of sunfish used iterative deepening MTD-bi search.
--- We only do minimax, two plies - really can't afford any more for speed!
--- We also never return to a previous position that our pieces have held, this makes threefold repetition unlikely.
--- It also greatly improves the endgame, by forcing our little 2 ply engine to look ahead and move pieces up.
-function KF.search(pos, states, color)
+-- "PUBLIC" FUNCTIONS --
+------------------------
+
+-- Return starting board state
+function KF.getInitialState()
+   return kf.Position.new(kf.initial, 0, {true,true}, {true,true}, 0, 0)
+end
+
+-- THE SEARCH FUNCTION
+-- pos: the game position (obtained from getInitialState()... initally)
+-- states: list of states we have seen already, can be nil if we don't care about 3fold rep
+-- careful: pass true for careful mode, which means we won't fall into checkmate as easily. Optional but you _should_ turn it on.
+function KF.search(pos, states, careful)
+   if(states == nil) then
+      states = {}
+   end
+
    if(kf.endgame(pos.board)) then
       KF.pst.K = KF.king_endgame_pst
       KF.pst.P = KF.pawn_endgame_pst
    end
-   
-   moves = KF.max(pos, color)
+
+   local moves = KF.max(pos, color)
 
    for i=1,#moves do
-      local next_move = kf.stripWhite(pos:move(moves[i][1]).board)
-      -- Look through every move.
-      -- Do not make a move that will put us into checkmate.
+      local next_move = kf.stripOppPieces(pos:move(moves[i][1]).board)
+      -- Do not choose a move that puts us in mate
       if(moves[i][2] < kf.MATE_VALUE) then
+         -- Do not choose a move that we've moved to before
          if(kf.not_repeated(next_move, states)) then
             return moves[i][1]
          end
       end
     end
 
-   -- At this point, there were no new moves that did not put us into checkmate.
+   -- At this point, there were no new moves that did not also put us into checkmate.
    -- So, repeated moves are tolerated here only.
    for i=1,#moves do
       -- play the best move that isn't mate.
@@ -659,60 +668,14 @@ function KF.search(pos, states, color)
    return nil
 end
 
--------------------------------------------------------------------------------
--- User interface
--------------------------------------------------------------------------------
 
-function KF.parse(c)
-   if not c then
-      return nil
-   end
-   local p, v = c:sub(1, 1), c:sub(2, 2)
-   if not (p and v and tonumber(v)) then
-      return nil
-   end
+-- PRINT FUNCTIONS --
+----------------------
 
-   local fil, rank = string.byte(p) - string.byte("a"), tonumber(v) - 1
-   return KF.A1 + fil - 10 * rank
-end
-
--- change board position to long algebriac form
+-- change board position to long algebraic form. For UCI standard.
 function KF.longalg(i)
    local rank, fil = math.floor((i - KF.A1) / 10), (i - KF.A1) % 10
    return string.char(fil + string.byte("a")) .. tostring(-rank + 1)
-end
-
--- break board position into integer file and rank
-function KF.convmove(i)
-   local rank, fil = math.floor((i - KF.A1) / 10), (i - KF.A1) % 10
-   return {fil,-rank}
-end
-
-KF.strsplit = function(a)
-   local out = {}
-   while true do
-      local pos, _ = a:find("\n")
-      if pos then
-         out[#out + 1] = a:sub(1, pos - 1)
-         a = a:sub(pos + 1)
-      else
-         out[#out + 1] = a
-         break
-      end
-   end
-   return out
-end
-
--- no worko in unity.
-function KF.printboard(board)
-   local l = KF.strsplit(board, "\n")
-   for k, v in ipairs(l) do
-      for i = 1, #v do
-         io.write(v:sub(i, i))
-         io.write("  ")
-      end
-      io.write("\n")
-   end
 end
 
 return KF

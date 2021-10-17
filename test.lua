@@ -1,56 +1,68 @@
+-- Testing class by pitting two bots against each other
+
 kf = require "knucklefish"
 socket = require "socket"
 profiler = require "profiler"
 
-wexplored = {}
-bexplored = {}
+-- cutoff: don't do more than this many plies
+-- w_careful: true if white should play in careful mode
+-- b_careful: true if black should play in careful mode.
+-- printboard: true if board should be printed after each ply
+-- timing: true if we should print ms/move
+-- profile: true if we should run lua profiler
+function BOTvBOT(cutoff, w_careful, b_careful, timing, printboard, profile)
 
--- aiming for soft limit of 20 ms.
+   -- use cached moves for white and black
+   local wexplored = {}
+   local bexplored = {}
 
-function BOTvBOT(printboard, timing, profile, i)
-   local pos = kf.Position.new(kf.initial, 0, {true,true}, {true,true}, 0, 0)
+   local pos = kf.getInitialState()
 
    if(profile) then
       profiler.start()
    end
 
-   AI_TURN = true
-   peak = 0
+   local white_turn = true
+   local peak_time = 0
 
-   while(i > 0) do
-      i = i - 1
+   local plies = 0
+   while(cutoff > plies) do
+      plies = plies + 1
 
       if(timing) then
          starttime = socket.gettime()
       end
 
-         if(AI_TURN) then
-            move = kf.search(pos,wexplored)
-         else
-            move = kf.search(pos,bexplored)
-         end
+      if(white_turn) then
+         move = kf.search(pos,wexplored, w_careful)
+      else
+         move = kf.search(pos,bexplored, b_careful)
+      end
 
-         if(timing) then
+      if(timing) then
          time = math.floor(1000 * (socket.gettime() - starttime))
-         print("Run Time " .. tostring(i) .. ": " .. tostring(time) .. "ms")
+         print("Plies left " .. tostring(plies) .. ": " .. tostring(time) .. "ms")
          if(time > peak) then
             peak = time
          end
       end
 
-      if(move) then
-         pmove = {kf.convmove(move[1]),kf.convmove(move[2])}
-
-         if(AI_TURN) then
-            pmove = {kf.convmove(119-move[1]),kf.convmove(119-move[2])}
+      -- If move is nil, we have been checkmated.
+      if(move == nil) then
+         print("Checkmate.")
+         if(white_turn) then
+            print("White wins.")
+         else
+            print("Black wins.")
          end
+         return
+      else
 
-         --print(kf.longalg(move[1]) .. kf.longalg(move[2]))
-         --print(pmove[2][1] .. "," .. pmove[2][2])
-         
+         print(kf.longalg(move[1]) .. kf.longalg(move[2]))
+         -- apply move
          pos = pos:move(move)
 
-         if(AI_TURN) then
+         if(white_turn) then
             table.insert(wexplored,kf.stripWhite(pos.board))
             if(printboard) then
                kf.printboard(pos:rotate().board)
@@ -62,15 +74,7 @@ function BOTvBOT(printboard, timing, profile, i)
             end
          end
 
-         
-         AI_TURN = not AI_TURN
-         --if score <= -kf.MATE_VALUE then
-         --   print("You won")
-         --end
-   
-         --if score >= kf.MATE_VALUE then
-         --   print("You lost")
-         --end
+         white_turn = not white_turn
       end
    end
 
@@ -80,9 +84,9 @@ function BOTvBOT(printboard, timing, profile, i)
    end
 
    if(timing) then
-      print("peak " .. tostring(peak) .. "ms")
+      print("peak " .. tostring(peak_time) .. "ms")
    end
 end
 
 -- Test function
-BOTvBOT(true, true, false, 200)
+BOTvBOT(100,true,true,true)
