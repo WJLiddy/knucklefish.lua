@@ -19,7 +19,12 @@ local KF = {}
 KF.MATE_VALUE = 30000
 
 -- A little bonus for checking the king, which is usually a good move.
-KF.CHECK_BONUS = 50
+-- Worth more than a pawn.
+KF.CHECK_BONUS = 200
+
+
+
+-- !! Experiemntal
 
 -- This is a value that could HEAVILY IMPLY the king is in checkmate.
 -- It means that A. the king is in check, and B. has nowhere to move.
@@ -27,9 +32,9 @@ KF.CHECK_BONUS = 50
 -- So avoid this state at all costs.
 
 -- On offense, try to get this state if it costs about half a pawn
-KF.KING_ENDANGERED_OFFENSE = 500
--- On defense, AVOID THIS STATE as much as possible, we're probably in mate.
-KF.KING_ENDANGERED_DEFENSE = 3000
+KF.KING_ENDANGERED_OFFENSE = 200
+-- On defense, up the stakes a little more
+KF.KING_ENDANGERED_DEFENSE = 500
 
 
 -- Our board is represented as a 120 character string. The padding allows for
@@ -517,6 +522,7 @@ function KF.kingEndangered(pos,move)
 
    local kdirs = {}
    --print(pos.board:sub(kbase,kbase)) 
+   kdirs[kbase] = true
 
    for n=1,#kf.directions.K do
       local loc = kbase + kf.directions.K[n]
@@ -601,7 +607,7 @@ function KF.max(pos,color)
       --if(color == "b") then
       --  print("RESULT -- value of MAX " .. KF.longalg(119-moves[i][1]) .. KF.longalg(119-moves[i][2]) .. " is " .. val .. "\n")
       --else
-      -- print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
+      --  print("RESULT -- value of MAX " .. KF.longalg(moves[i][1]) .. KF.longalg(moves[i][2]) .. " is " .. val .. "\n")
       --end 
    end
 
