@@ -55,8 +55,8 @@ prevstates = {}
 -- Minor bug, will never accept en-passant, but this is a meme engine anyway
 -- fight me r/AnarchyChess
 local pos = kf.Position.new(initial, 0,
-{string.find(castle_status,"Q") != nil,string.find(castle_status,"K") != nil},
-{string.find(castle_status,"q") != nil,string.find(castle_status,"k") != nil},
+{string.find(castle_status,"Q") ~= nil,string.find(castle_status,"K") ~= nil},
+{string.find(castle_status,"q") ~= nil,string.find(castle_status,"k") ~= nil},
 0, 0)
 
 pos.board = convertFEN(board_state_fen)
